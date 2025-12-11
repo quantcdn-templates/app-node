@@ -1,0 +1,10 @@
+[{
+    "title": "Node.js (Base Image)",
+    "url": "/deploy/step-one?template=app-node",
+    "summary": "Base Node.js image with Quant platform integration. Use as a foundation for framework templates.",
+    "content": "Node.js base image with built-in SMTP support and platform features. Not intended for direct use - serves as a base for framework templates (Astro, Next.js, Express, etc.). Available in LTS (20, 22) and current (23) versions.",
+    "image": "https://raw.githubusercontent.com/quantcdn-templates/app-node/main/quant/screenshot.png",
+    "categories": ["base", "nodejs"],
+    "tags": ["node", "nodejs", "base-image", "quant"],
+    "template_type": "base"
+}]

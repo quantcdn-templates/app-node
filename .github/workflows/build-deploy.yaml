@@ -1,0 +1,68 @@
+# Build and publish Node.js base images to GHCR
+# Builds for Node LTS (20, 22) and Current (23)
+name: Build Node.js Base Images
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '*'
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: quantcdn-templates/app-node
+
+jobs:
+  build-matrix:
+    runs-on: ${{ vars.RUNNER_TYPE || 'ubuntu-latest' }}
+    strategy:
+      matrix:
+        node_version: ['20', '22', '23']
+    
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ matrix.node_version }}
+            type=raw,value=latest,enable=${{ matrix.node_version == '22' }}
+
+      - name: Build and push Node ${{ matrix.node_version }}
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: ${{ vars.BUILD_PLATFORM || 'linux/amd64' }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NODE_VERSION=${{ matrix.node_version }}
+          cache-from: type=gha,scope=node-${{ matrix.node_version }}
+          cache-to: type=gha,mode=max,scope=node-${{ matrix.node_version }}

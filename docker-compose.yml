@@ -1,0 +1,15 @@
+# This is a base image - not intended to be run directly.
+# Use a framework template (app-astro, etc.) or extend this image.
+#
+# Example extending this image:
+#   FROM ghcr.io/quantcdn-templates/app-node:22
+#   WORKDIR /app
+#   COPY package*.json ./
+#   RUN npm ci
+#   COPY . .
+#   CMD ["node", "server.js"]
+
+services:
+  node:
+    image: ghcr.io/quantcdn-templates/app-node:latest
+    build: .
