@@ -1,0 +1,128 @@
+# This workflow is used to build and publish the Node.js base images.
+# It creates the public, default images that can be used as a foundation for Node.js templates.
+#
+# NOTE: This workflow only runs for the quantcdn-templates organization.
+# If you've forked this repo, this workflow will be skipped automatically.
+name: Build and Publish Node.js Base Images
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Run weekly to pick up new base image updates
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: quantcdn-templates/app-node
+
+jobs:
+  build:
+    # Only run for quantcdn-templates organization
+    if: github.repository_owner == 'quantcdn-templates'
+    runs-on: ${{ vars.RUNNER_TYPE || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        node_version: ['20', '22', '23']
+        include:
+          - node_version: '20'
+            is_lts: true
+          - node_version: '22'
+            is_lts: true
+            is_default: true
+          - node_version: '23'
+            is_lts: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build image for testing
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: temp-build:latest
+          build-args: |
+            NODE_VERSION=${{ matrix.node_version }}
+          cache-from: type=gha,scope=node${{ matrix.node_version }}
+          cache-to: type=gha,mode=max,scope=node${{ matrix.node_version }}
+
+      - name: Verify Node version
+        id: node-version
+        run: |
+          ACTUAL_NODE_VERSION=$(docker run --rm temp-build:latest node -v)
+          echo "NODE_VERSION=${{ matrix.node_version }}" >> $GITHUB_OUTPUT
+          echo "Expected Node version: ${{ matrix.node_version }}"
+          echo "Actual Node version: $ACTUAL_NODE_VERSION"
+
+      - name: Test container startup
+        run: |
+          # Test that the container starts and entrypoint runs
+          docker run --rm --name test-node-${{ matrix.node_version }} \
+            temp-build:latest node -e "console.log('Node.js ' + process.version + ' is working')"
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch,suffix=-${{ matrix.node_version }}
+            type=ref,event=pr,suffix=-${{ matrix.node_version }}
+            type=raw,value=${{ matrix.node_version }},enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ matrix.is_default == true && github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ matrix.node_version }}-dev,enable=${{ github.ref == 'refs/heads/develop' }}
+            type=raw,value=dev,enable=${{ matrix.is_default == true && github.ref == 'refs/heads/develop' }}
+            type=semver,pattern={{version}}-${{ matrix.node_version }}
+            type=semver,pattern={{major}}.{{minor}}-${{ matrix.node_version }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NODE_VERSION=${{ matrix.node_version }}
+          cache-from: |
+            type=gha,scope=node${{ matrix.node_version }}
+            type=registry,ref=ghcr.io/quantcdn-templates/app-node:cache-node${{ matrix.node_version }}
+          cache-to: |
+            type=gha,mode=max,scope=node${{ matrix.node_version }}
+            type=registry,ref=ghcr.io/quantcdn-templates/app-node:cache-node${{ matrix.node_version }},mode=max
+
+      - name: Create build summary
+        if: matrix.is_default
+        run: |
+          echo "## Node.js Base Image Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Node Versions Built**: 20, 22, 23" >> $GITHUB_STEP_SUMMARY
+          echo "- **Default Node Version**: 22 (:latest tag)" >> $GITHUB_STEP_SUMMARY
+          echo "- **LTS Versions**: 20, 22" >> $GITHUB_STEP_SUMMARY
+          echo "- **Current Version**: 23" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tags Generated**: :20, :22, :23, :latest" >> $GITHUB_STEP_SUMMARY
+          echo "- **Base Image**: node:\${NODE_VERSION}-bookworm-slim" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registry**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY

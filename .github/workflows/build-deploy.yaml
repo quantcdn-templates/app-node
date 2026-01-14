@@ -1,35 +1,33 @@
-# Build and publish Node.js base images to GHCR
-# Builds for Node LTS (20, 22) and Current (23)
-name: Build Node.js Base Images
+# This workflow is an example of how you can build and push this codebase to Quant Cloud.
+# Use this as a starting point for your own workflow if you are forking this repository.
+#
+# Configuration Variables:
+# - RUNNER_TYPE: Set to 'ubuntu-24.04-arm' for ARM runners, defaults to 'ubuntu-latest' (x86)
+# - QUANT_BASE_URL: Set to 'https://dash.quantgov.cloud/api/v3' for QuantGov customers
+#   (defaults to 'https://dashboard.quantcdn.io/api/v3')
+name: Build and Push Node.js to Quant Cloud
 
 on:
   push:
     branches:
+      - develop
       - main
     tags:
       - '*'
-  pull_request:
-    branches:
-      - main
 
 concurrency:
-  group: build-${{ github.ref }}
+  group: build-and-push-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: quantcdn-templates/app-node
-
 jobs:
-  build-matrix:
+  build-and-push:
     runs-on: ${{ vars.RUNNER_TYPE || 'ubuntu-latest' }}
     strategy:
       matrix:
         node_version: ['20', '22', '23']
-    
-    permissions:
-      contents: read
-      packages: write
+        include:
+          - node_version: '22'
+            is_default: true
 
     steps:
       - name: Checkout code
@@ -38,31 +36,46 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+      - name: Initialize Quant Cloud
+        uses: quantcdn/quant-cloud-init-action@v1.1.5
+        id: init
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          quant_organization: ${{ secrets.QUANT_ORGANIZATION }}
+          quant_api_key: ${{ secrets.QUANT_API_KEY }}
+          base_url: ${{ vars.QUANT_BASE_URL || 'https://dashboard.quantcdn.io/api/v3' }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=${{ matrix.node_version }}
-            type=raw,value=latest,enable=${{ matrix.node_version == '22' }}
-
-      - name: Build and push Node ${{ matrix.node_version }}
+      - name: Build and push Node.js image
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: ${{ vars.BUILD_PLATFORM || 'linux/amd64' }}
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ steps.init.outputs.stripped_endpoint }}/${{ secrets.QUANT_ORGANIZATION }}/${{ steps.init.outputs.quant_application }}:node-${{ matrix.node_version }}-${{ steps.init.outputs.image_suffix_clean }}
           build-args: |
             NODE_VERSION=${{ matrix.node_version }}
           cache-from: type=gha,scope=node-${{ matrix.node_version }}
           cache-to: type=gha,mode=max,scope=node-${{ matrix.node_version }}
+
+      - name: Create environment if it doesn't exist
+        if: ${{ matrix.is_default && !startsWith(github.ref, 'refs/tags/') && steps.init.outputs.environment_exists == 'false' }}
+        uses: quantcdn/quant-cloud-environment-action@v1.2.1
+        with:
+          api_key: ${{ secrets.QUANT_API_KEY }}
+          organization: ${{ secrets.QUANT_ORGANIZATION }}
+          app_name: ${{ steps.init.outputs.quant_application }}
+          environment_name: ${{ steps.init.outputs.environment_name }}
+          from_environment: production
+          image_suffix: ${{ steps.init.outputs.image_suffix_clean }}
+          base_url: ${{ vars.QUANT_BASE_URL || 'https://dashboard.quantcdn.io/api/v3' }}
+
+      - name: Redeploy existing environment
+        if: ${{ matrix.is_default && !startsWith(github.ref, 'refs/tags/') && steps.init.outputs.environment_exists == 'true' }}
+        uses: quantcdn/quant-cloud-environment-state-action@v1
+        with:
+          api_key: ${{ secrets.QUANT_API_KEY }}
+          organization: ${{ secrets.QUANT_ORGANIZATION }}
+          application: ${{ steps.init.outputs.quant_application }}
+          environment: ${{ steps.init.outputs.environment_name }}
+          action: redeploy
+          base_url: ${{ vars.QUANT_BASE_URL || 'https://dashboard.quantcdn.io/api/v3' }}
