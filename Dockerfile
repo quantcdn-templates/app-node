@@ -29,6 +29,11 @@ RUN chmod +x /quant-entrypoint.d/*
 COPY quant/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
+# Copy default application (can be overridden by child images)
+COPY --chown=node:node index.js /app/index.js
+
+EXPOSE 3000
+
 # Use tini for proper signal handling
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "index.js"]

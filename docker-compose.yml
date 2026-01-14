@@ -1,15 +1,15 @@
-# This is a base image - not intended to be run directly.
-# Use a framework template (app-astro, etc.) or extend this image.
+# Node.js base image for Quant Cloud.
+# Runs a default welcome page, or extend for your application.
 #
 # Example extending this image:
 #   FROM ghcr.io/quantcdn-templates/app-node:22
-#   WORKDIR /app
-#   COPY package*.json ./
-#   RUN npm ci
-#   COPY . .
+#   COPY --chown=node:node . .
+#   RUN npm ci --omit=dev
 #   CMD ["node", "server.js"]
 
 services:
   node:
     image: ghcr.io/quantcdn-templates/app-node:latest
     build: .
+    ports:
+      - "3000:3000"

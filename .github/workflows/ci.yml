@@ -77,11 +77,20 @@ jobs:
           echo "Expected Node version: ${{ matrix.node_version }}"
           echo "Actual Node version: $ACTUAL_NODE_VERSION"
 
-      - name: Test container startup
+      - name: Test container startup and health endpoint
         run: |
-          # Test that the container starts and entrypoint runs
-          docker run --rm --name test-node-${{ matrix.node_version }} \
-            temp-build:latest node -e "console.log('Node.js ' + process.version + ' is working')"
+          # Start container in background
+          docker run -d --name test-node-${{ matrix.node_version }} -p 3000:3000 temp-build:latest
+
+          # Wait for startup
+          sleep 3
+
+          # Test health endpoint
+          curl -f http://localhost:3000/health || (docker logs test-node-${{ matrix.node_version }} && exit 1)
+
+          # Cleanup
+          docker stop test-node-${{ matrix.node_version }}
+          docker rm test-node-${{ matrix.node_version }}
 
       - name: Extract metadata
         id: meta
