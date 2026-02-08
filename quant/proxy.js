@@ -97,9 +97,9 @@ const proxy = http.createServer((clientReq, clientRes) => {
     }
   });
 
-  // Abort proxy request if client disconnects
-  clientReq.on('close', () => {
-    if (!clientRes.writableEnded) {
+  // Abort proxy request if client disconnects before response completes
+  clientRes.on('close', () => {
+    if (!clientRes.writableFinished) {
       proxyReq.destroy();
     }
   });
