@@ -1,4 +1,4 @@
-ARG NODE_VERSION=22
+ARG NODE_VERSION=24
 FROM node:${NODE_VERSION}-bookworm-slim
 
 # Update system packages for security and install common utilities
