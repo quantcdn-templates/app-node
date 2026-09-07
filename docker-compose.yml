@@ -7,9 +7,12 @@
 #   RUN npm ci --omit=dev
 #   CMD ["node", "server.js"]
 
+# Quant Cloud: run on ARM64 to match the arm64 images the org builds.
+x-quant-labels:
+  quant.architecture: ARM64
+
 services:
   node:
-    image: ghcr.io/quantcdn-templates/app-node:latest
     build: .
     ports:
       - "3000:3000"
