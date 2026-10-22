@@ -34,10 +34,8 @@ jobs:
       packages: write
     strategy:
       matrix:
-        node_version: ['20', '22', '24']
+        node_version: ['22', '24']
         include:
-          - node_version: '20'
-            is_lts: true
           - node_version: '22'
             is_lts: true
           - node_version: '24'
