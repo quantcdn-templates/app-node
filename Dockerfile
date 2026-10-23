@@ -17,7 +17,7 @@ RUN set -ex; \
     && \
     rm -rf /var/lib/apt/lists/*
 
-# Node image already has 'node' user at UID 1000 (matches EFS access points)
+# Node image already has 'node' user at UID 1000 (matches shared filesystem access points)
 RUN mkdir -p /app && chown node:node /app
 
 WORKDIR /app
