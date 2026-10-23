@@ -7,7 +7,7 @@ Base image for Node.js applications with Quant Cloud platform integration. **Not
 - **Multiple versions**: Node 20, 22 (LTS), 23 (Current)
 - **SMTP support**: ssmtp or Postfix relay (configured via env vars)
 - **Signal handling**: tini init system
-- **Non-root**: Runs as `node` user (UID 1000, EFS compatible)
+- **Non-root**: Runs as `node` user (UID 1000, shared filesystem compatible)
 
 ## Using as a Base Image
 
