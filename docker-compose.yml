@@ -13,6 +13,7 @@ x-quant-labels:
 
 services:
   node:
+    image: ghcr.io/quantcdn-templates/app-node:latest
     build: .
     ports:
       - "3000:3000"
