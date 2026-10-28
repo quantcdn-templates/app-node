@@ -5,8 +5,6 @@
 # Use this as a starting point for your own workflow if you are forking this repository.
 #
 # Configuration Variables:
-# - RUNNER_TYPE: Set to 'ubuntu-24.04-arm' for native ARM builds, defaults to 'ubuntu-latest' (x86).
-#   An x86 runner builds the arm64 image under QEMU, which is slower.
 # - QUANT_BASE_URL: Set to 'https://dash.quantgov.cloud/api/v3' for QuantGov customers
 #   (defaults to 'https://dashboard.quantcdn.io/api/v3')
 name: Deploy Template to Quant Cloud (template repo only)
@@ -38,9 +36,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -58,7 +53,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: |
             ${{ steps.init.outputs.stripped_endpoint }}/${{ secrets.QUANT_ORGANIZATION }}/${{ steps.init.outputs.quant_application }}:node-${{ matrix.node_version }}-${{ steps.init.outputs.image_suffix_clean }}
