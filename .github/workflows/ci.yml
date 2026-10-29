@@ -77,6 +77,17 @@ jobs:
           echo "Expected Node version: ${{ matrix.node_version }}"
           echo "Actual Node version: $ACTUAL_NODE_VERSION"
 
+      - name: Verify managed database CA bundle
+        run: |
+          docker run --rm --entrypoint node temp-build:latest -e '
+            const fs = require("node:fs");
+            const tls = require("node:tls");
+            const ca = fs.readFileSync("/opt/rds-ca-certs/rds-ca-cert-bundle.pem", "utf8");
+            if (!ca.includes("BEGIN CERTIFICATE")) throw new Error("Missing managed DB CA certificates");
+            tls.createSecureContext({ ca });
+            if (process.env.NODE_EXTRA_CA_CERTS !== "/opt/rds-ca-certs/rds-ca-cert-bundle.pem") throw new Error("Node CA configuration missing");
+          '
+
       - name: Test container startup and health endpoint
         run: |
           # Start container in background
