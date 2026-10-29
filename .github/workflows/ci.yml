@@ -71,7 +71,8 @@ jobs:
       - name: Verify Node version
         id: node-version
         run: |
-          ACTUAL_NODE_VERSION=$(docker run --rm temp-build:latest node -v)
+          docker run --rm --entrypoint node temp-build:latest /usr/local/bin/verify-node-runtime.cjs
+          ACTUAL_NODE_VERSION=$(docker run --rm --entrypoint node temp-build:latest -v)
           echo "NODE_VERSION=${{ matrix.node_version }}" >> $GITHUB_OUTPUT
           echo "Expected Node version: ${{ matrix.node_version }}"
           echo "Actual Node version: $ACTUAL_NODE_VERSION"
@@ -128,9 +129,9 @@ jobs:
         if: matrix.is_default
         run: |
           echo "## Node.js Base Image Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Node Versions Built**: 20, 22, 24" >> $GITHUB_STEP_SUMMARY
+          echo "- **Node Versions Built**: 22, 24" >> $GITHUB_STEP_SUMMARY
           echo "- **Default Node Version**: 24 (:latest tag)" >> $GITHUB_STEP_SUMMARY
-          echo "- **LTS Versions**: 20, 22, 24" >> $GITHUB_STEP_SUMMARY
-          echo "- **Tags Generated**: :20, :22, :24, :latest" >> $GITHUB_STEP_SUMMARY
+          echo "- **LTS Versions**: 22, 24" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tags Generated**: :22, :24, :latest" >> $GITHUB_STEP_SUMMARY
           echo "- **Base Image**: node:\${NODE_VERSION}-bookworm-slim" >> $GITHUB_STEP_SUMMARY
           echo "- **Registry**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
