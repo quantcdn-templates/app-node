@@ -1,6 +1,10 @@
 ARG NODE_VERSION=24
 FROM node:${NODE_VERSION}-bookworm-slim
 
+# Keep automatic patch updates, but reject runtimes predating the Brotli fix.
+COPY quant/verify-node-runtime.cjs /usr/local/bin/verify-node-runtime.cjs
+RUN node /usr/local/bin/verify-node-runtime.cjs
+
 # Update system packages for security and install common utilities
 RUN set -ex; \
     apt-get update && \

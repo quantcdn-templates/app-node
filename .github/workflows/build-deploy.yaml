@@ -25,7 +25,7 @@ jobs:
     runs-on: ${{ vars.RUNNER_TYPE || 'ubuntu-latest' }}
     strategy:
       matrix:
-        node_version: ['20', '22', '23']
+        node_version: ['22', '24']
         include:
           - node_version: '22'
             is_default: true
@@ -59,6 +59,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          pull: true
           platforms: ${{ steps.build-platform.outputs.platform }}
           push: true
           tags: |
