@@ -64,6 +64,7 @@ jobs:
           push: true
           tags: |
             ${{ steps.init.outputs.stripped_endpoint }}/${{ secrets.QUANT_ORGANIZATION }}/${{ steps.init.outputs.quant_application }}:node-${{ matrix.node_version }}-${{ steps.init.outputs.image_suffix_clean }}
+            ${{ matrix.is_default && format('{0}/{1}/{2}:node-{3}', steps.init.outputs.stripped_endpoint, secrets.QUANT_ORGANIZATION, steps.init.outputs.quant_application, steps.init.outputs.image_suffix_clean) || '' }}
           build-args: |
             NODE_VERSION=${{ matrix.node_version }}
           cache-from: type=gha,scope=node-${{ matrix.node_version }}
