@@ -21,6 +21,12 @@ RUN set -ex; \
     && \
     rm -rf /var/lib/apt/lists/*
 
+# Same managed-database CA location as the PHP/Drupal base images.
+RUN mkdir -p /opt/rds-ca-certs && \
+    curl -fsSL --retry 3 https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
+      -o /opt/rds-ca-certs/rds-ca-cert-bundle.pem
+ENV NODE_EXTRA_CA_CERTS=/opt/rds-ca-certs/rds-ca-cert-bundle.pem
+
 # Node image already has 'node' user at UID 1000 (matches shared filesystem access points)
 RUN mkdir -p /app && chown node:node /app
 
